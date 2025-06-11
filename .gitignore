@@ -1,1 +1,5 @@
 .idea
+.DS_store
+pretrained_weights/
+data/
+__pycache__
