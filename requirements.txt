@@ -11,4 +11,3 @@ scikit_learn
 scipy
 torchinfo
 tqdm
-umap_learn
