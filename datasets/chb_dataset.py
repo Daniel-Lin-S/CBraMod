@@ -1,10 +1,7 @@
-import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from utils.util import to_tensor
 import os
-import random
-import lmdb
 import pickle
 from scipy import signal
 
@@ -28,7 +25,7 @@ class CustomDataset(Dataset):
         label = data_dict['y']
         data = signal.resample(data, 2000, axis=1)
         data = data.reshape(16, 10, 200)
-        return data/100, label
+        return data / 100, label
 
     def collate(self, batch):
         x_data = np.array([x[0] for x in batch])

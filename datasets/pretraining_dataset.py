@@ -27,7 +27,7 @@ class PretrainingDataset(Dataset):
             patch = pickle.loads(txn.get(key.encode()))
 
         patch = to_tensor(patch)
-        # print(patch.shape)
+
         return patch
 
 

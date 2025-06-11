@@ -1,8 +1,6 @@
-import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from utils.util import to_tensor
-import os
 import random
 import lmdb
 import pickle

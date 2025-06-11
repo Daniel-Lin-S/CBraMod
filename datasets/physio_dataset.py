@@ -1,9 +1,6 @@
-import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from utils.util import to_tensor
-import os
-import random
 import lmdb
 import pickle
 
@@ -27,9 +24,6 @@ class CustomDataset(Dataset):
             pair = pickle.loads(txn.get(key.encode()))
         data = pair['sample']
         label = pair['label']
-        # print(key)
-        # print(data)
-        # print(label)
         return data/100, label
 
     def collate(self, batch):
