@@ -1,51 +1,112 @@
-import scipy
+"""
+Preprocess the FACED dataset and store it in LMDB format.
+
+The original dataset can be downloaded from https://www.synapse.org/Synapse:syn50614194/files/
+Only the "Processed_data" folder is required.
+Number of subjects: 123.
+Each pkl file corresponds to a subject's EEG data.
+
+Shape of each file:
+(28, 32, 7500)
+28: number of video clips
+32: number of electrodes
+7500: number of time points (30 seconds at 250 Hz)
+
+Basic information
+Number of channels (electrodes): 32
+Number of subjects: 123
+Number of classes (emotions): 9
+Sampling rate: 250 Hz
+Trial duration: 30 seconds
+
+Steps of EEG pre-processing:
+1. Adjust the sampling rate to 200 Hz (6000 time points)
+2. Split each trial into three 10-second segments.
+3. Segment each 10-second sample into 30 patches of 1 second length each (reshaping)
+4. Store the processed data in LMDB format, with each segment as a sample.
+"""
+
 from scipy import signal
 import os
 import lmdb
 import pickle
 import numpy as np
+import argparse
 
+parser = argparse.ArgumentParser(description='Preprocess the FACED dataset for CBraMod')
+parser.add_argument(
+    '--lmdb_path', type=str,
+    default='data/lmdb/FACED',
+    help='The path to store the processed LMDB dataset')
+parser.add_argument(
+    '--root_dir', type=str,
+    default='data/FACED/Processed_data',
+    help='The path to the original FACED dataset')
+parser.add_argument(
+    '--verbose', type=bool,
+    default=True,
+    help='Whether to print the processing information')
 
-labels = np.array([0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,4,5,5,5,6,6,6,7,7,7,8,8,8])
-root_dir = '/data/cyn/FACED/Processed_data'
-files = [file for file in os.listdir(root_dir)]
+# Labels for emotions for the 28 video clips (3 clips for each emotion)
+labels = np.repeat(np.arange(9), 3)
+
+params = parser.parse_args()
+
+files = [file for file in os.listdir(params.root_dir)]
 files = sorted(files)
 
+# 80 patients for training, 20 for validation, and 23 for testing
 files_dict = {
-    'train':files[:80],
-    'val':files[80:100],
-    'test':files[100:],
+    'train' : files[:80],
+    'val' : files[80:100],
+    'test' : files[100:],
 }
 
 dataset = {
-    'train': list(),
-    'val': list(),
-    'test': list(),
+    'train' : list(),
+    'val' : list(),
+    'test' : list(),
 }
 
-db = lmdb.open('/data/datasets/BigDownstream/Faced/processed', map_size=6612500172)
+db = lmdb.open(params.lmdb_path, map_size=6612500172)
 
 for files_key in files_dict.keys():
     for file in files_dict[files_key]:
-        f = open(os.path.join(root_dir, file), 'rb')
-        array = pickle.load(f)
+        f = open(os.path.join(params.root_dir, file), 'rb')
+        array = pickle.load(f)  # (28, 32, 7500)
+
+        # adjust the sampling rate to 200Hz
         eeg = signal.resample(array, 6000, axis=2)
+        # segment into 30 1-second patches
         eeg_ = eeg.reshape(28, 32, 30, 200)
+
+        # split each trial into three 10-second segments
+        # i - index of video clip, j - index of segment
         for i, (samples, label) in enumerate(zip(eeg_, labels)):
             for j in range(3):
                 sample = samples[:, 10*j:10*(j+1), :]
                 sample_key = f'{file}-{i}-{j}'
-                print(sample_key)
                 data_dict = {
                     'sample': sample, 'label': label
                 }
+
+                # write into LMDB database
                 txn = db.begin(write=True)
                 txn.put(key=sample_key.encode(), value=pickle.dumps(data_dict))
                 txn.commit()
                 dataset[files_key].append(sample_key)
 
+        if params.verbose:
+            print('Finished loading file ', file)
 
+
+# Store the keys of the dataset in LMDB
 txn = db.begin(write=True)
 txn.put(key='__keys__'.encode(), value=pickle.dumps(dataset))
 txn.commit()
 db.close()
+
+if params.verbose:
+    print(
+        'Preprocessing completed and data stored in LMDB format in ',
+        params.lmdb_path)

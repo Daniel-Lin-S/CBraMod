@@ -1,12 +1,27 @@
 import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
+from argparse import Namespace
 
 from .cbramod import CBraMod
 
 
 class Model(nn.Module):
-    def __init__(self, param):
+    def __init__(self, param: Namespace):
+        """
+        Initializes the Model with a CBraMod backbone and a classifier.
+
+        Parameters
+        ----------
+        param: Namespace
+            Parameters containing model configuration:
+            - use_pretrained_weights: bool. Whether to use pre-trained weights.
+            - foundation_dir: str. Path to the pre-trained weights.
+            - classifier: str. Type of classifier to use ('avgpooling_patch_reps' or 'all_patch_reps').
+            - dropout: float. Dropout rate for the classifier.
+            - num_of_classes: int. Number of output classes.
+            - cuda: int. CUDA device index for loading pre-trained weights.
+        """
         super(Model, self).__init__()
         self.backbone = CBraMod(
             in_dim=200, out_dim=200, d_model=200,
@@ -38,8 +53,21 @@ class Model(nn.Module):
                 nn.Linear(200, param.num_of_classes),
             )
 
-    def forward(self, x):
-        bz, ch_num, seq_len, patch_size = x.shape
+    def forward(self, x: torch.Tensor):
+        """
+        Parameters
+        ----------
+        x: torch.Tensor
+            Input tensor of shape (batch_size, num_of_channels, time_segments, points_per_patch)
+            where time_segments is the number of segments and
+            points_per_patch is the number of points in each segment.
+
+        Returns
+        -------
+        out: torch.Tensor
+            Output tensor of shape (batch_size, num_of_classes)
+            containing the logit probabilities for each class.
+        """
         feats = self.backbone(x)
         out = self.classifier(feats)
         return out

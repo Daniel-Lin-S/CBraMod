@@ -6,15 +6,63 @@ from models.criss_cross_transformer import TransformerEncoderLayer, TransformerE
 
 
 class CBraMod(nn.Module):
-    def __init__(self, in_dim=200, out_dim=200, d_model=200, dim_feedforward=800, seq_len=30, n_layer=12,
-                    nhead=8):
+    """
+    CBraMod model for EEG signal processing using a transformer-based architecture.
+
+    Attributes
+    ----------
+    patch_embedding : PatchEmbedding
+        Module for embedding EEG patches into a higher-dimensional space.
+    encoder : TransformerEncoder
+        Transformer encoder for processing the embedded patches.
+    proj_out : nn.Sequential
+        Module for projecting the output of the transformer encoder
+        to the desired output dimension.
+    
+    Methods
+    -------
+    forward(x: torch.Tensor, mask: torch.Tensor=None) -> torch.Tensor
+        Forward pass of the model.
+        Takes an input tensor and applies patch embedding,
+        transformer encoding, and projection to output.
+    """
+    def __init__(
+            self, in_dim: int=200, out_dim: int=200,
+            d_model: int=200, dim_feedforward: int=800,
+            seq_len: int=30, n_layer: int=12,
+            nhead: int=8
+        ):
+        """
+        Parameters
+        ----------
+        in_dim : int
+            Input dimension. (last dimension of the tensor)
+            This represents number of samples in a time window.
+        out_dim : int
+            Output dimension of the model.
+            The last dimension of the output tensor.
+        d_model : int
+            Dimension of the latent space of the transformer encoder.
+        dim_feedforward : int
+            Dimension of the feedforward network in the transformer encoder.
+        seq_len : int
+            Length of the input sequence.
+        n_layer : int
+            Number of layers in the transformer encoder.
+        nhead : int
+            Number of attention heads in the transformer encoder.
+        """
         super().__init__()
-        self.patch_embedding = PatchEmbedding(in_dim, out_dim, d_model, seq_len)
+        self.patch_embedding = PatchEmbedding(
+            in_dim, out_dim, d_model, seq_len)
         encoder_layer = TransformerEncoderLayer(
-            d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=True, norm_first=True,
-            activation=F.gelu
+            d_model=d_model, nhead=nhead,
+            dim_feedforward=dim_feedforward,
+            batch_first=True, norm_first=True,
+            activation=F.gelu 
         )
-        self.encoder = TransformerEncoder(encoder_layer, num_layers=n_layer, enable_nested_tensor=False)
+        self.encoder = TransformerEncoder(
+            encoder_layer, num_layers=n_layer, enable_nested_tensor=False)
         self.proj_out = nn.Sequential(
             # nn.Linear(d_model, d_model*2),
             # nn.GELU(),
@@ -24,7 +72,26 @@ class CBraMod(nn.Module):
         )
         self.apply(_weights_init)
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask=None) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape 
+            (batch_size, num_of_channels, time_segments, in_dim).
+            This corresponds to the EEG signal.
+        mask : torch.Tensor, optional
+            Mask tensor of the same shape as x,
+            where 1 indicates masked positions.
+            If None, no masking is applied.
+        
+        Returns
+        -------
+        torch.Tensor
+            Output tensor of shape 
+            (batch_size, num_of_channels, time_segments, out_dim).
+            This corresponds to the embedded features. 
+        """
         patch_emb = self.patch_embedding(x, mask)
         feats = self.encoder(patch_emb)
 
@@ -33,16 +100,38 @@ class CBraMod(nn.Module):
         return out
 
 class PatchEmbedding(nn.Module):
+    """
+    Embed EEG patches into a higher-dimensional space
+    using convolutional layers and spectral features.
+    """
     def __init__(self, in_dim, out_dim, d_model, seq_len):
+        """
+        Parameters
+        ----------
+        in_dim : int
+            Input dimension. (last dimension of the tensor)
+        out_dim : int
+            Output dimension of the model. (unused)
+        d_model : int
+            Dimension of the output features.
+            This means the dimension of the output embeddings.
+        seq_len : int
+            Length of the input sequence.
+            (number of time segments)
+        """
         super().__init__()
         self.d_model = d_model
         self.positional_encoding = nn.Sequential(
-            nn.Conv2d(in_channels=d_model, out_channels=d_model, kernel_size=(19, 7), stride=(1, 1), padding=(9, 3),
-                      groups=d_model),
+            nn.Conv2d(
+                in_channels=d_model, out_channels=d_model,
+                kernel_size=(19, 7), stride=(1, 1), padding=(9, 3),
+                groups=d_model
+            ),
         )
         self.mask_encoding = nn.Parameter(torch.zeros(in_dim), requires_grad=False)
         # self.mask_encoding = nn.Parameter(torch.randn(in_dim), requires_grad=True)
 
+        # Projection layers to embed patches
         self.proj_in = nn.Sequential(
             nn.Conv2d(in_channels=1, out_channels=25, kernel_size=(1, 49), stride=(1, 25), padding=(0, 24)),
             nn.GroupNorm(5, 25),
@@ -68,7 +157,19 @@ class PatchEmbedding(nn.Module):
         # )
 
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: torch.Tensor=None):
+        """
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape 
+            (batch_size, num_of_channels, time_segments, points_per_patch).
+            This corresponds to the EEG signal.
+        mask : torch.Tensor, optional
+            Mask tensor of the same shape as x,
+            where 1 indicates masked positions.
+            If None, no masking is applied.
+        """
         bz, ch_num, patch_num, patch_size = x.shape
         if mask == None:
             mask_x = x

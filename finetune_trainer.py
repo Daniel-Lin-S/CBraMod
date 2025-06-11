@@ -1,6 +1,4 @@
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
 # from models.model_for_faced import Model
 from tqdm import tqdm
 import torch
@@ -8,11 +6,6 @@ from finetune_evaluator import Evaluator
 from torch.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 from timeit import default_timer as timer
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
-import matplotlib as mpl
-import umap
-from sklearn.decomposition import PCA
 import copy
 import os
 
