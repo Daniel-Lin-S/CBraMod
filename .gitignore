@@ -3,3 +3,6 @@
 pretrained_weights/
 data/
 __pycache__
+logs/
+*.sh
+*.out
