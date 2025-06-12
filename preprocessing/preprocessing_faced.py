@@ -52,7 +52,10 @@ labels = np.repeat(np.arange(9), 3)
 
 params = parser.parse_args()
 
-files = [file for file in os.listdir(params.root_dir)]
+files = [
+    file
+    for file in os.listdir(params.root_dir)
+    if not file.startswith('.')]
 files = sorted(files)
 
 # 80 patients for training, 20 for validation, and 23 for testing
