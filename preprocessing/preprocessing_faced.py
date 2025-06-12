@@ -13,6 +13,7 @@ Shape of each file:
 7500: number of time points (30 seconds at 250 Hz)
 
 Basic information
+-----------------
 Number of channels (electrodes): 32
 Number of subjects: 123
 Number of classes (emotions): 9

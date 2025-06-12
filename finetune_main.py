@@ -4,6 +4,8 @@ import random
 import numpy as np
 import torch
 
+import os
+
 from datasets import (
     custom_dataset, seedv_dataset, physio_dataset, shu_dataset, isruc_dataset,
     chb_dataset, speech_dataset, mumtaz_dataset, seedvig_dataset,
@@ -16,9 +18,12 @@ from models import (
     model_for_faced, model_for_seedv, model_for_physio, model_for_shu,
     model_for_isruc, model_for_chb, model_for_speech, model_for_mumtaz,
     model_for_seedvig, model_for_stress, model_for_tuev, model_for_tuab,
-    model_for_bciciv2a
+    model_for_bciciv2a, model_simple
 )
 
+
+def str2bool(v: str):
+    return v.lower() in ("yes", "true", "t", "1")
 
 def main():
     parser = argparse.ArgumentParser(description='Big model downstream')
@@ -46,6 +51,8 @@ def main():
                         ' by taking the average, leaving a single point for each time segment. '
                         'The build a linear classifier (linear probing paradigm)'
                         'all_patch_reps: Apply MLP to all features.')
+    parser.add_argument('--progress_bar', type=str2bool, default=True,
+                        help='If True, show the progress bar during training and validation')
 
     """############ Downstream dataset settings ############"""
     parser.add_argument('--downstream_dataset', type=str, default='FACED',
@@ -53,11 +60,22 @@ def main():
                         'CHB-MIT, BCIC2020-3, Mumtaz2016, SEED-VIG, MentalArithmetic, '
                         'TUEV, TUAB, BCIC-IV-2a]')
     parser.add_argument('--datasets_dir', type=str,
-                        default='/data/lmdb/Faced',
+                        default='data/lmdb/Faced',
                         help='Path to the datasets directory')
     parser.add_argument('--num_of_classes', type=int, default=9, help='number of classes')
-    parser.add_argument('--model_dir', type=str, default='/data/models_weights/',
+    parser.add_argument('--model_dir', type=str, default='data/models_weights/',
                         help='The directory to save the model weights')
+    parser.add_argument('--task_type', type=str, default='multiclass',
+                        help='The type of task to be performed. '
+                        'Options: [multiclass, binaryclass, regression]')
+    parser.add_argument('--n_electrodes', type=int, default=32,
+                        help='Number of channels in the data.')
+    parser.add_argument('--time_segments', type=int, default=10,
+                        help='Number of segments in the data.'
+                        'Equivalently, length of the recording in seconds')
+    parser.add_argument('--ndim', type=int, default=200,
+                        help='Number of dimensions of feature in each time segment.'
+                        'For raw data, this is 200 (200Hz)')
     """############ Downstream dataset settings ############"""
 
     parser.add_argument('--num_workers', type=int, default=16,
@@ -65,31 +83,51 @@ def main():
     parser.add_argument('--label_smoothing', type=float, default=0.1,
                         help='Amount of smoothing when computing the cross entropy loss (default: 0.1)'
                         'Must be a float in range [0.0, 1.0]')
-    parser.add_argument('--multi_lr', type=bool, default=True,
+    parser.add_argument('--multi_lr', type=str2bool, default=True,
                         help='If true, different learning rates for different modules')
-    parser.add_argument('--frozen', type=bool,
+    parser.add_argument('--frozen', type=str2bool,
                         default=False,
                         help='If true, freeze the weights of pretrained backbone'
                         ' during fine-tuning')
-    parser.add_argument('--use_pretrained_weights', type=bool,
-                        default=True, help='if True, load pretrained weights of the backbone'
+    parser.add_argument('--use_pretrained_weights', type=str2bool,
+                        default=True,
+                        help='if True, load pretrained weights of the backbone'
                         '. Otherwise, train the backbone from scratch')
     parser.add_argument('--foundation_dir', type=str,
                         default='pretrained_weights/pretrained_weights.pth',
                         help='The path to the pretrained weights of the foundation model')
+    parser.add_argument('--use_backbone', type=str2bool,
+                        default=True,
+                        help='if True, use the backbone CBraMod as feature extractor')
 
     params = parser.parse_args()
+    print('Full Settings: ')
     print(params)
 
     setup_seed(params.seed)
     torch.cuda.set_device(params.cuda)
     print('The downstream dataset is {}'.format(params.downstream_dataset))
 
+    # Path checks
+    if not os.path.exists(params.model_dir):
+        os.makedirs(params.model_dir)
+    if not os.path.exists(params.datasets_dir):
+        raise ValueError(
+            'The datasets directory does not exist: {}'.format(
+                params.datasets_dir))
+    if not os.path.exists(params.foundation_dir):
+        raise ValueError(
+            'The foundation model weights file does not exist: {}'.format(
+                params.foundation_dir))
+
     # Load dataset and model
     if params.downstream_dataset == 'FACED':
         load_dataset = custom_dataset.LoadDataset(params)
         data_loader = load_dataset.get_data_loader()
-        model = model_for_faced.Model(params)
+        if params.use_backbone:
+            model = model_for_faced.Model(params)
+        else:
+            model = model_simple.Model(params)
         t = Trainer(params, data_loader, model)
         t.train_for_multiclass()
     elif params.downstream_dataset == 'SEED-V':
@@ -164,8 +202,8 @@ def main():
         model = model_for_bciciv2a.Model(params)
         t = Trainer(params, data_loader, model)
         t.train_for_multiclass()
-    print('Done!!!!!')
-
+    print('Finetuning completed for dataset: {}'.format(params.downstream_dataset))
+    print('------------------------------------------------------')
 
 def setup_seed(seed):
     torch.manual_seed(seed)
