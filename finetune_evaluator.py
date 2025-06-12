@@ -19,11 +19,12 @@ class Evaluator:
         Parameters
         ----------
         params : argparse.Namespace
-            Placeholder, can be used for future configurations or parameters.
+            Parameters containing model configuration and evaluation settings.
+            - progress_bar: bool. Whether to show a progress bar during evaluation.
         data_loader : torch.utils.data.DataLoader
             Provide batches of data for evaluation.
         """
-        # self.params = params 
+        self.params = params
         self.data_loader = data_loader
 
     def get_metrics_for_multiclass(
@@ -49,7 +50,13 @@ class Evaluator:
 
         truths = []
         preds = []
-        for x, y in tqdm(self.data_loader, mininterval=1):
+
+        if self.params.progress_bar:
+            loader = tqdm(self.data_loader, mininterval=1)
+        else:
+            loader = self.data_loader
+
+        for x, y in loader:
             x = x.cuda()
             y = y.cuda()
 
@@ -92,7 +99,13 @@ class Evaluator:
         truths = []
         preds = []
         scores = []
-        for x, y in tqdm(self.data_loader, mininterval=1):
+        
+        if self.params.progress_bar:
+            loader = tqdm(self.data_loader, mininterval=1)
+        else:
+            loader = self.data_loader
+
+        for x, y in loader:
             x = x.cuda()
             y = y.cuda()
             pred = model(x)
@@ -136,7 +149,13 @@ class Evaluator:
 
         truths = []
         preds = []
-        for x, y in tqdm(self.data_loader, mininterval=1):
+
+        if self.params.progress_bar:
+            loader = tqdm(self.data_loader, mininterval=1)
+        else:
+            loader = self.data_loader
+
+        for x, y in loader:
             x = x.cuda()
             y = y.cuda()
             pred = model(x)

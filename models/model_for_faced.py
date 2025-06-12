@@ -21,6 +21,10 @@ class Model(nn.Module):
             - dropout: float. Dropout rate for the classifier.
             - num_of_classes: int. Number of output classes.
             - cuda: int. CUDA device index for loading pre-trained weights.
+            - n_electrodes: int. Number of channels in the data.
+            - time_segments: int. Number of time segments in the data.
+            - ndim: int. Number of dimensions of feature in each time segment.
+            should be 200 if using the published version of CBramod
         """
         super(Model, self).__init__()
         self.backbone = CBraMod(
@@ -28,6 +32,9 @@ class Model(nn.Module):
             dim_feedforward=800, seq_len=30,
             n_layer=12, nhead=8
         )
+
+        agg_dim = param.n_electrodes * param.time_segments * param.ndim
+        temporal_dim = param.time_segments * param.ndim
 
         if param.use_pretrained_weights:
             map_location = torch.device(f'cuda:{param.cuda}')
@@ -39,18 +46,18 @@ class Model(nn.Module):
                 Rearrange('b c s d -> b d c s'),
                 nn.AdaptiveAvgPool2d((1, 1)),
                 nn.Flatten(),
-                nn.Linear(200, param.num_of_classes),
+                nn.Linear(param.ndim, param.num_of_classes),
             )
         elif param.classifier == 'all_patch_reps':
             self.classifier = nn.Sequential(
                 Rearrange('b c s d -> b (c s d)'),
-                nn.Linear(32 * 10 * 200, 10 * 200),
+                nn.Linear(agg_dim, temporal_dim),
                 nn.ELU(),
                 nn.Dropout(param.dropout),
-                nn.Linear(10 * 200, 200),
+                nn.Linear(temporal_dim, param.ndim),
                 nn.ELU(),
                 nn.Dropout(param.dropout),
-                nn.Linear(200, param.num_of_classes),
+                nn.Linear(param.ndim, param.num_of_classes),
             )
 
     def forward(self, x: torch.Tensor):

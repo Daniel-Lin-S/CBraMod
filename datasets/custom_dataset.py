@@ -102,8 +102,13 @@ class LoadDataset(object):
         train_set = CustomDataset(self.datasets_dir, mode='train')
         val_set = CustomDataset(self.datasets_dir, mode='val')
         test_set = CustomDataset(self.datasets_dir, mode='test')
-        print(len(train_set), len(val_set), len(test_set))
-        print(len(train_set) + len(val_set) + len(test_set))
+        print(
+            'Dataset sizes: train {} val {} test {}'.format(
+                len(train_set), len(val_set), len(test_set)
+            ))
+        total_size = len(train_set) + len(val_set) + len(test_set)
+        print('Total number of samples in the dataset:', total_size)
+
         data_loader = {
             'train': DataLoader(
                 train_set,
