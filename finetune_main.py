@@ -49,7 +49,9 @@ def main():
 
     """############ Downstream dataset settings ############"""
     parser.add_argument('--downstream_dataset', type=str, default='FACED',
-                        help='[FACED, SEED-V, PhysioNet-MI, SHU-MI, ISRUC, CHB-MIT, BCIC2020-3, Mumtaz2016, SEED-VIG, MentalArithmetic, TUEV, TUAB, BCIC-IV-2a]')
+                        help='[FACED, SEED-V, PhysioNet-MI, SHU-MI, ISRUC, '
+                        'CHB-MIT, BCIC2020-3, Mumtaz2016, SEED-VIG, MentalArithmetic, '
+                        'TUEV, TUAB, BCIC-IV-2a]')
     parser.add_argument('--datasets_dir', type=str,
                         default='/data/lmdb/Faced',
                         help='Path to the datasets directory')
