@@ -1,7 +1,8 @@
 """
 Preprocess the FACED dataset and store it in LMDB format.
 
-The original dataset can be downloaded from https://www.synapse.org/Synapse:syn50614194/files/
+The original dataset can be downloaded from 
+https://www.synapse.org/Synapse:syn50614194/files/
 Only the "Processed_data" folder is required.
 Number of subjects: 123.
 Each pkl file corresponds to a subject's EEG data.
@@ -20,6 +21,17 @@ Number of classes (emotions): 9
 Sampling rate: 250 Hz
 Trial duration: 30 seconds
 
+Labelling of emotions:
+0: Anger
+1: Disgust
+2: Fear
+3: Sadness
+4: Neutral
+5: Amusement
+6: Inspiration
+7: Joy
+8: Tenderness
+
 Steps of EEG pre-processing:
 1. Adjust the sampling rate to 200 Hz (6000 time points)
 2. Split each trial into three 10-second segments.
@@ -31,8 +43,9 @@ from scipy import signal
 import os
 import lmdb
 import pickle
-import numpy as np
 import argparse
+import numpy as np
+
 
 parser = argparse.ArgumentParser(description='Preprocess the FACED dataset for CBraMod')
 parser.add_argument(
@@ -49,14 +62,17 @@ parser.add_argument(
     help='Whether to print the processing information')
 
 # Labels for emotions for the 28 video clips (3 clips for each emotion)
-labels = np.repeat(np.arange(9), 3)
+group1 = np.tile(np.repeat(np.arange(4), 3), 1)
+group2 = np.repeat(4, 4)
+group3 = np.tile(np.repeat(np.arange(5, 9), 3), 1)
+
+clip_labels = np.concatenate((group1, group2, group3))
 
 params = parser.parse_args()
 
 files = [
-    file
-    for file in os.listdir(params.root_dir)
-    if not file.startswith('.')]
+    file for file in os.listdir(params.root_dir)
+    if file.endswith('.pkl')]
 files = sorted(files)
 
 # 80 patients for training, 20 for validation, and 23 for testing
@@ -86,7 +102,13 @@ for files_key in files_dict.keys():
 
         # split each trial into three 10-second segments
         # i - index of video clip, j - index of segment
-        for i, (samples, label) in enumerate(zip(eeg_, labels)):
+        if eeg_.shape[0] != len(clip_labels):
+            raise ValueError(
+                "Number of video clips in {} does not match "
+                "the expected number: {}".format(
+                    len(file, clip_labels)))
+
+        for i, (samples, label) in enumerate(zip(eeg_, clip_labels)):
             for j in range(3):
                 sample = samples[:, 10*j:10*(j+1), :]
                 sample_key = f'{file}-{i}-{j}'
