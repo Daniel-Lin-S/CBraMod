@@ -2,8 +2,9 @@
 .DS_store
 pretrained_weights/
 data/
+figure/
 __pycache__
 logs/
 *.sh
 *.out
-figure/
+_*.py
