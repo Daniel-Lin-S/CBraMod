@@ -1,10 +1,9 @@
 import numpy as np
 import scipy
-from scipy import signal
 import os
 import lmdb
 import pickle
-from scipy.signal import butter, lfilter, resample, filtfilt
+from scipy.signal import butter, lfilter, resample
 
 def butter_bandpass(low_cut, high_cut, fs, order=5):
     nyq = 0.5 * fs
@@ -13,7 +12,7 @@ def butter_bandpass(low_cut, high_cut, fs, order=5):
     b, a = butter(order, [low, high], btype='band')
     return b, a
 
-root_dir = '/data/datasets/BCICIV2a/data_mat'
+root_dir = 'data/BCICIV2a/data_mat'
 files = [file for file in os.listdir(root_dir)]
 files = sorted(files)
 

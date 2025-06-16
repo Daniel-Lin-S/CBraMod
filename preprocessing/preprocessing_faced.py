@@ -4,7 +4,6 @@ Preprocess the FACED dataset and store it in LMDB format.
 The original dataset can be downloaded from 
 https://www.synapse.org/Synapse:syn50614194/files/
 Only the "Processed_data" folder is required.
-Number of subjects: 123.
 Each pkl file corresponds to a subject's EEG data.
 
 Shape of each file:
@@ -44,7 +43,8 @@ import os
 import lmdb
 import pickle
 import argparse
-import numpy as np
+
+from data_utils import faced_labels
 
 
 parser = argparse.ArgumentParser(description='Preprocess the FACED dataset for CBraMod')
@@ -60,13 +60,6 @@ parser.add_argument(
     '--verbose', type=bool,
     default=True,
     help='Whether to print the processing information')
-
-# Labels for emotions for the 28 video clips (3 clips for each emotion)
-group1 = np.tile(np.repeat(np.arange(4), 3), 1)
-group2 = np.repeat(4, 4)
-group3 = np.tile(np.repeat(np.arange(5, 9), 3), 1)
-
-clip_labels = np.concatenate((group1, group2, group3))
 
 params = parser.parse_args()
 
@@ -89,6 +82,8 @@ dataset = {
 }
 
 db = lmdb.open(params.lmdb_path, map_size=6612500172)
+
+clip_labels, _ = faced_labels()
 
 for files_key in files_dict.keys():
     for file in files_dict[files_key]:

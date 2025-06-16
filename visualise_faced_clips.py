@@ -26,7 +26,7 @@ from sklearn.decomposition import PCA
 
 from models.cbramod import CBraMod
 from utils.util import to_tensor
-from utils.data_util import faced_labels
+from preprocessing.data_utils import faced_labels
 from utils.visualisations import scatter_with_labels
 
 
