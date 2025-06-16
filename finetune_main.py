@@ -15,11 +15,13 @@ from datasets import (
 from finetune_trainer import Trainer
 
 from models import (
-    model_for_faced, model_for_seedv, model_for_physio, model_for_shu,
-    model_for_isruc, model_for_chb, model_for_speech, model_for_mumtaz,
+    model_for_seedv, model_for_physio, model_for_shu,
+    model_for_isruc, model_for_chb, model_for_mumtaz,
     model_for_seedvig, model_for_stress, model_for_tuev, model_for_tuab,
     model_for_bciciv2a, model_simple
 )
+
+from models.classifier import Classifier
 
 
 def str2bool(v: str):
@@ -125,7 +127,7 @@ def main():
         load_dataset = custom_dataset.LoadDataset(params)
         data_loader = load_dataset.get_data_loader()
         if params.use_backbone:
-            model = model_for_faced.Model(params)
+            model = Classifier(params)
         else:
             model = model_simple.Model(params)
         t = Trainer(params, data_loader, model)
@@ -163,8 +165,12 @@ def main():
     elif params.downstream_dataset == 'BCIC2020-3':
         load_dataset = speech_dataset.LoadDataset(params)
         data_loader = load_dataset.get_data_loader()
-        model = model_for_speech.Model(params)
+        if params.use_backbone:
+            model = Classifier(params)
+        else:
+            model = model_simple.Model(params)
         t = Trainer(params, data_loader, model)
+        print('Training model')
         t.train_for_multiclass()
     elif params.downstream_dataset == 'Mumtaz2016':
         load_dataset = mumtaz_dataset.LoadDataset(params)
@@ -202,6 +208,10 @@ def main():
         model = model_for_bciciv2a.Model(params)
         t = Trainer(params, data_loader, model)
         t.train_for_multiclass()
+    else:
+        raise ValueError(
+            'Unsupported dataset: {}'.format(params.downstream_dataset))
+
     print('Finetuning completed for dataset: {}'.format(params.downstream_dataset))
     print('------------------------------------------------------')
 

@@ -6,18 +6,21 @@ from argparse import Namespace
 from .cbramod import CBraMod
 
 
-class Model(nn.Module):
-    def __init__(self, param: Namespace):
+class Classifier(nn.Module):
+    """
+    Classifier model based on the CBraMod architecture.
+    Used for downstream classification tasks.
+    """
+    def __init__(self, param : Namespace):
         """
-        Initializes the Model with a CBraMod backbone and a classifier.
-
         Parameters
         ----------
         param: Namespace
             Parameters containing model configuration:
             - use_pretrained_weights: bool. Whether to use pre-trained weights.
             - foundation_dir: str. Path to the pre-trained weights.
-            - classifier: str. Type of classifier to use ('avgpooling_patch_reps' or 'all_patch_reps').
+            - classifier: str. Type of classifier to use 
+              ('avgpooling_patch_reps' or 'all_patch_reps').
             - dropout: float. Dropout rate for the classifier.
             - num_of_classes: int. Number of output classes.
             - cuda: int. CUDA device index for loading pre-trained weights.
@@ -26,29 +29,27 @@ class Model(nn.Module):
             - ndim: int. Number of dimensions of feature in each time segment.
             should be 200 if using the published version of CBramod
         """
-        super(Model, self).__init__()
+        super(Classifier, self).__init__()
         self.backbone = CBraMod(
             in_dim=200, out_dim=200, d_model=200,
             dim_feedforward=800, seq_len=30,
             n_layer=12, nhead=8
         )
-
-        agg_dim = param.n_electrodes * param.time_segments * param.ndim
-        temporal_dim = param.time_segments * param.ndim
-
         if param.use_pretrained_weights:
             map_location = torch.device(f'cuda:{param.cuda}')
-            self.backbone.load_state_dict(torch.load(param.foundation_dir, map_location=map_location))
+            self.backbone.load_state_dict(
+                torch.load(param.foundation_dir, map_location=map_location))
         self.backbone.proj_out = nn.Identity()
-
         if param.classifier == 'avgpooling_patch_reps':
             self.classifier = nn.Sequential(
                 Rearrange('b c s d -> b d c s'),
                 nn.AdaptiveAvgPool2d((1, 1)),
                 nn.Flatten(),
-                nn.Linear(param.ndim, param.num_of_classes),
+                nn.Linear(param.ndim, param.num_of_classes)
             )
         elif param.classifier == 'all_patch_reps':
+            agg_dim = param.n_electrodes * param.time_segments * param.ndim
+            temporal_dim = param.time_segments * param.ndim
             self.classifier = nn.Sequential(
                 Rearrange('b c s d -> b (c s d)'),
                 nn.Linear(agg_dim, temporal_dim),
@@ -60,7 +61,7 @@ class Model(nn.Module):
                 nn.Linear(param.ndim, param.num_of_classes),
             )
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x : torch.Tensor) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -78,6 +79,3 @@ class Model(nn.Module):
         feats = self.backbone(x)
         out = self.classifier(feats)
         return out
-
-
-

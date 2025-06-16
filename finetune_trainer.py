@@ -1,5 +1,4 @@
 import torch
-# from models.model_for_faced import Model
 from tqdm import tqdm
 import torch
 from finetune_evaluator import Evaluator
