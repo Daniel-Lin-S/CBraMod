@@ -9,6 +9,11 @@ class CBraMod(nn.Module):
     """
     CBraMod model for EEG signal processing using a transformer-based architecture.
 
+    Input shape: (batch_size, num_of_channels, time_segments, in_dim)
+    Patch Embedding: (batch_size, num_of_channels, time_segments, d_model)
+    Transformer Encoded Embedding: (batch_size, num_of_channels, time_segments, d_model)
+    Output shape: (batch_size, num_of_channels, time_segments, out_dim)
+
     Attributes
     ----------
     patch_embedding : PatchEmbedding
@@ -30,7 +35,7 @@ class CBraMod(nn.Module):
             self, in_dim: int=200, out_dim: int=200,
             d_model: int=200, dim_feedforward: int=800,
             seq_len: int=30, n_layer: int=12,
-            nhead: int=8
+            nhead: int=8, linear_proj: bool=True
         ):
         """
         Parameters
@@ -51,6 +56,11 @@ class CBraMod(nn.Module):
             Number of layers in the transformer encoder.
         nhead : int
             Number of attention heads in the transformer encoder.
+        linear_proj : bool, optional
+            If True, use a simple linear projection for the output.
+            If False, use a more complex projection with multiple layers
+            and GELU activation. \n
+            Default is True.
         """
         super().__init__()
         self.patch_embedding = PatchEmbedding(
@@ -58,18 +68,24 @@ class CBraMod(nn.Module):
         encoder_layer = TransformerEncoderLayer(
             d_model=d_model, nhead=nhead,
             dim_feedforward=dim_feedforward,
-            batch_first=True, norm_first=True,
+            batch_first=True,
             activation=F.gelu 
         )
         self.encoder = TransformerEncoder(
-            encoder_layer, num_layers=n_layer, enable_nested_tensor=False)
-        self.proj_out = nn.Sequential(
-            # nn.Linear(d_model, d_model*2),
-            # nn.GELU(),
-            # nn.Linear(d_model*2, d_model),
-            # nn.GELU(),
-            nn.Linear(d_model, out_dim),
-        )
+            encoder_layer, num_layers=n_layer)
+    
+        if linear_proj:
+            self.proj_out = nn.Sequential(
+                nn.Linear(d_model, out_dim),
+            )
+        else:
+            self.proj_out = nn.Sequential(
+                nn.Linear(d_model, d_model*2),
+                nn.GELU(),
+                nn.Linear(d_model*2, d_model),
+                nn.GELU(),
+                nn.Linear(d_model, out_dim),
+            )
         self.apply(_weights_init)
 
     def forward(self, x: torch.Tensor, mask=None) -> torch.Tensor:
@@ -99,25 +115,25 @@ class CBraMod(nn.Module):
 
         return out
 
+
 class PatchEmbedding(nn.Module):
     """
     Embed EEG patches into a higher-dimensional space
     using convolutional layers and spectral features.
     """
-    def __init__(self, in_dim, out_dim, d_model, seq_len):
+    def __init__(self, in_dim: int, out_dim: int, d_model: int, seq_len: int):
         """
         Parameters
         ----------
         in_dim : int
             Input dimension. (last dimension of the tensor)
         out_dim : int
-            Output dimension of the model. (unused)
+            Output dimension of the model. (placeholder)
         d_model : int
             Dimension of the output features.
             This means the dimension of the output embeddings.
         seq_len : int
-            Length of the input sequence.
-            (number of time segments)
+            Length of the input sequence. (placeholder)
         """
         super().__init__()
         self.d_model = d_model
@@ -157,7 +173,10 @@ class PatchEmbedding(nn.Module):
         # )
 
 
-    def forward(self, x: torch.Tensor, mask: torch.Tensor=None):
+    def forward(
+            self, x: torch.Tensor,
+            mask: torch.Tensor=None
+        ) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -169,6 +188,13 @@ class PatchEmbedding(nn.Module):
             Mask tensor of the same shape as x,
             where 1 indicates masked positions.
             If None, no masking is applied.
+
+        Returns
+        -------
+        torch.Tensor
+            Output tensor of shape 
+            (batch_size, num_of_channels, time_segments, d_model).
+            This corresponds to the embedded features.
         """
         bz, ch_num, patch_num, patch_size = x.shape
         if mask == None:
@@ -198,6 +224,10 @@ class PatchEmbedding(nn.Module):
 
 
 def _weights_init(m):
+    """
+    Initialise weights for the model layers
+    using Kaiming normal initialisation for linear and convolutional layers,
+    """
     if isinstance(m, nn.Linear):
         nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
     if isinstance(m, nn.Conv1d):
@@ -209,7 +239,6 @@ def _weights_init(m):
 
 
 if __name__ == '__main__':
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = CBraMod(in_dim=200, out_dim=200, d_model=200, dim_feedforward=800, seq_len=30, n_layer=12,
                     nhead=8).to(device)
