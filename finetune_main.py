@@ -163,7 +163,7 @@ def main():
         t = Trainer(params, data_loader, model)
         t.train_for_binaryclass()
     elif params.downstream_dataset == 'BCIC2020-3':
-        load_dataset = speech_dataset.LoadDataset(params)
+        load_dataset = custom_dataset.LoadDataset(params)
         data_loader = load_dataset.get_data_loader()
         if params.use_backbone:
             model = Classifier(params)

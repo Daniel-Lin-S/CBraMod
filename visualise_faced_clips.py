@@ -31,7 +31,7 @@ from utils.visualisations import scatter_with_labels
 
 
 parser = argparse.ArgumentParser(
-    description="Visualize EEG data using CBraMod foundation model")
+    description="Visualise EEG data using CBraMod foundation model")
 parser.add_argument(
     '--data_dir', default='data/FACED',
     type=str,
