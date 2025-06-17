@@ -80,6 +80,7 @@ class CustomDataset(Dataset):
         """
         x_data = np.array([x[0] for x in batch])
         y_label = np.array([x[1] for x in batch])
+
         return to_tensor(x_data), to_tensor(y_label).long()
 
 
