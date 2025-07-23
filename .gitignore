@@ -1,10 +1,10 @@
-.idea
-.DS_store
 pretrained_weights/
+checkpoints/
 data/
 figure/
-__pycache__
 logs/
+__pycache__
 *.sh
-*.out
 _*.py
+.idea
+.DS_store

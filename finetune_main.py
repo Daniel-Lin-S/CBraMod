@@ -1,14 +1,11 @@
 import argparse
-import random
-
-import numpy as np
 import torch
 
 import os
 
 from datasets import (
     custom_dataset, seedv_dataset, physio_dataset, shu_dataset, isruc_dataset,
-    chb_dataset, speech_dataset, mumtaz_dataset, seedvig_dataset,
+    chb_dataset, mumtaz_dataset, seedvig_dataset,
     stress_dataset, tuev_dataset, tuab_dataset, bciciv2a_dataset
 )
 
@@ -22,6 +19,7 @@ from models import (
 )
 
 from models.classifier import Classifier
+from utils.util import setup_seed
 
 
 def str2bool(v: str):
@@ -98,6 +96,13 @@ def main():
     parser.add_argument('--foundation_dir', type=str,
                         default='pretrained_weights/pretrained_weights.pth',
                         help='The path to the pretrained weights of the foundation model')
+    parser.add_argument(
+        '--foundation_configs', type=str, default='configs/default.yaml',
+        help='Path to the configuration file for the CBraMod model.'
+        'Must have key "CBraMod" with model parameters.'
+        'If you want to use a different configuration than the public '
+        'version, please create a new configuration file. '
+    )
     parser.add_argument('--use_backbone', type=str2bool,
                         default=True,
                         help='if True, use the backbone CBraMod as feature extractor')
@@ -214,13 +219,6 @@ def main():
 
     print('Finetuning completed for dataset: {}'.format(params.downstream_dataset))
     print('------------------------------------------------------')
-
-def setup_seed(seed):
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.backends.cudnn.deterministic = True
 
 
 if __name__ == '__main__':

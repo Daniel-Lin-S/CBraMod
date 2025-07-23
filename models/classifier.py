@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
 from argparse import Namespace
+import yaml
 
 from .cbramod import CBraMod
 
@@ -30,11 +31,11 @@ class Classifier(nn.Module):
             should be 200 if using the published version of CBramod
         """
         super(Classifier, self).__init__()
-        self.backbone = CBraMod(
-            in_dim=200, out_dim=200, d_model=200,
-            dim_feedforward=800, seq_len=30,
-            n_layer=12, nhead=8
-        )
+        with open(param.foundation_configs, 'r') as f:
+            foundation_configs = yaml.safe_load(f)
+
+        self.backbone = CBraMod(**foundation_configs['CBraMod'])
+
         if param.use_pretrained_weights:
             map_location = torch.device(f'cuda:{param.cuda}')
             self.backbone.load_state_dict(

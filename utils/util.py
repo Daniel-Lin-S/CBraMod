@@ -1,11 +1,7 @@
-import os
 import random
-import signal
 
 import numpy as np
 import torch
-import torch.distributed as dist
-from tqdm import tqdm
 import random
 
 def generate_mask(
@@ -39,10 +35,22 @@ def generate_mask(
     mask = mask.bernoulli_(mask_ratio)
     return mask
 
+
 def to_tensor(array):
     return torch.from_numpy(array).float()
 
 
-if __name__ == '__main__':
-    a = generate_mask(192, 32, 15, mask_ratio=0.5, device=None)
-    print(a)
+def setup_seed(seed: int) -> None:
+    """
+    Set random seed (for torch, numpy and random) for reproducibility.
+
+    Parameters
+    ----------
+    seed : int
+        The random seed to set.
+    """
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True

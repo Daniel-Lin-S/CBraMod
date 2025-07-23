@@ -11,6 +11,11 @@ import torch
 import matplotlib.pyplot as plt
 from typing import Optional
 
+import yaml
+
+
+with open('configs/default.yaml', 'r') as f:
+    model_configs = yaml.safe_load(f)
 
 def load_cbramod_model(
         foundation_path : str,
@@ -34,9 +39,7 @@ def load_cbramod_model(
         device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = CBraMod(
-        in_dim=200, out_dim=200, d_model=200, dim_feedforward=800,
-        seq_len=30, n_layer=12, nhead=8).to(device)
+    model = CBraMod(**model_configs['CBraMod']).to(device)
     model.load_state_dict(
         torch.load(foundation_path, map_location=device))
     
