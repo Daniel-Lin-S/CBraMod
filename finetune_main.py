@@ -44,13 +44,15 @@ def main():
                         help='If non-zero, gradient clipping will be applied with this value'
                         ' (default: 1). Used to stabalise training')
     parser.add_argument('--dropout', type=float, default=0.1, help='dropout')
-    parser.add_argument('--classifier', type=str, default='avgpooling_patch_reps',
-                        help= 'The type of classifier. Default is avgpooling_patch_reps.'
-                        'Options: [all_patch_reps, avgpooling_patch_reps]'
-                        'avgpooling_patch_reps: flatten the channel and feature dimensions '
-                        ' by taking the average, leaving a single point for each time segment. '
-                        'The build a linear classifier (linear probing paradigm)'
-                        'all_patch_reps: Apply MLP to all features.')
+    parser.add_argument(
+        '--classifier', type=str, default='avgpooling_patch_reps',
+        choices=['all_patch_reps_onelayer', 'all_patch_reps_twolayer', 'avgpooling_patch_reps'],
+        help= 'The type of classifier. Default is avgpooling_patch_reps.'
+        'avgpooling_patch_reps: flatten the channel and feature dimensions '
+        ' by taking the average, leaving a single point for each time segment. '
+        'The build a linear classifier (linear probing paradigm)'
+        'all_patch_reps: Apply MLP to all features.'
+    )
     parser.add_argument('--progress_bar', type=str2bool, default=True,
                         help='If True, show the progress bar during training and validation')
 

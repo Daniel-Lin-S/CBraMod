@@ -48,18 +48,20 @@ class Classifier(nn.Module):
                 nn.Flatten(),
                 nn.Linear(param.ndim, param.num_of_classes)
             )
-        elif param.classifier == 'all_patch_reps':
-            agg_dim = param.n_electrodes * param.time_segments * param.ndim
-            temporal_dim = param.time_segments * param.ndim
+        elif param.classifier == 'all_patch_reps_twolayer':
+            all_dims = param.n_electrodes * param.time_segments * param.ndim
             self.classifier = nn.Sequential(
                 Rearrange('b c s d -> b (c s d)'),
-                nn.Linear(agg_dim, temporal_dim),
-                nn.ELU(),
-                nn.Dropout(param.dropout),
-                nn.Linear(temporal_dim, param.ndim),
+                nn.Linear(all_dims, param.ndim),
                 nn.ELU(),
                 nn.Dropout(param.dropout),
                 nn.Linear(param.ndim, param.num_of_classes),
+            )
+        elif param.classifier == 'all_patch_reps_onelayer':
+            all_dims = param.n_electrodes * param.time_segments * param.ndim
+            self.classifier = nn.Sequential(
+                Rearrange('b c s d -> b (c s d)'),
+                nn.Linear(all_dims, param.num_of_classes),
             )
 
     def forward(self, x : torch.Tensor) -> torch.Tensor:

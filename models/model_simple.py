@@ -17,8 +17,7 @@ class Model(nn.Module):
         ----------
         param: Namespace
             Parameters containing model configuration:
-            - classifier: str. Type of classifier to use
-            ('avgpooling_patch_reps' or 'all_patch_reps').
+            - classifier: str. Type of classifier to use.
             - dropout: float. Dropout rate for the classifier.
             - num_of_classes: int. Number of output classes.
             - cuda: int. CUDA device index for loading pre-trained weights.
@@ -28,8 +27,7 @@ class Model(nn.Module):
         """
         super(Model, self).__init__()
 
-        agg_dim = param.n_electrodes * param.time_segments * param.ndim
-        temporal_dim = param.time_segments * param.ndim
+        all_dim = param.n_electrodes * param.time_segments * param.ndim
 
         if param.classifier == 'avgpooling_patch_reps':
             self.classifier = nn.Sequential(
@@ -38,16 +36,22 @@ class Model(nn.Module):
                 nn.Flatten(),
                 nn.Linear(param.ndim, param.num_of_classes),
             )
-        elif param.classifier == 'all_patch_reps':
+        elif param.classifier == 'all_patch_reps_twolayer':
             self.classifier = nn.Sequential(
                 Rearrange('b c s d -> b (c s d)'),
-                nn.Linear(agg_dim, temporal_dim),
+                nn.Linear(all_dim, param.ndim),
                 nn.ELU(),
                 nn.Dropout(param.dropout),
-                nn.Linear(temporal_dim, param.ndim),
-                nn.ELU(),
-                nn.Dropout(param.dropout),
-                nn.Linear(200, param.num_of_classes),
+                nn.Linear(param.ndim, param.num_of_classes),
+            )
+        elif param.classifier == 'all_patch_reps_onelayer':
+            self.classifier = nn.Sequential(
+                Rearrange('b c s d -> b (c s d)'),
+                nn.Linear(all_dim, param.num_of_classes),
+            )
+        else:
+            raise ValueError(
+                f"Unknown classifier type: {param.classifier}"
             )
 
     def forward(self, x: torch.Tensor):
