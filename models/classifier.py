@@ -41,6 +41,7 @@ class Classifier(nn.Module):
             self.backbone.load_state_dict(
                 torch.load(param.foundation_dir, map_location=map_location))
         self.backbone.proj_out = nn.Identity()
+
         if param.classifier == 'avgpooling_patch_reps':
             self.classifier = nn.Sequential(
                 Rearrange('b c s d -> b d c s'),
@@ -62,6 +63,23 @@ class Classifier(nn.Module):
             self.classifier = nn.Sequential(
                 Rearrange('b c s d -> b (c s d)'),
                 nn.Linear(all_dims, param.num_of_classes),
+            )
+        elif param.classifier == 'all_patch_reps':
+            all_dims = param.n_electrodes * param.time_segments * param.ndim
+            temporal_dim = param.time_segments * param.ndim
+            self.classifier = nn.Sequential(
+                Rearrange('b c s d -> b (c s d)'),
+                nn.Linear(all_dims, temporal_dim),
+                nn.ELU(),
+                nn.Dropout(param.dropout),
+                nn.Linear(temporal_dim, param.ndim),
+                nn.ELU(),
+                nn.Dropout(param.dropout),
+                nn.Linear(param.ndim, param.num_of_classes),
+            )
+        else:
+            raise ValueError(
+                f"Unknown classifier type: {param.classifier}"
             )
 
     def forward(self, x : torch.Tensor) -> torch.Tensor:
