@@ -1,0 +1,8 @@
+CBraMod:   # default CBraMod configuration, the ones used for the published weights
+  dropout: 0.1           # dropout rate
+  in_dim: 200            # Number of features for each spatial-temporal point in the input
+  out_dim: 200           # Number of features for each spatial-temporal point in the output
+  d_model: 200           # Dimension for the latent space of the encoder
+  dim_feedforward: 800   # Hidden dimension of the feedforward network in the encoder
+  n_layer: 12            # Number of layers in the encoder.
+  nhead: 8               # Number of attention heads in the transformer encoder.

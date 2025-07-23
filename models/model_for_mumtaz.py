@@ -10,7 +10,7 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.backbone = CBraMod(
             in_dim=200, out_dim=200, d_model=200,
-            dim_feedforward=800, seq_len=30,
+            dim_feedforward=800,
             n_layer=12, nhead=8
         )
         if param.use_pretrained_weights:

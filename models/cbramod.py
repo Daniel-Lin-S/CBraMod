@@ -34,8 +34,9 @@ class CBraMod(nn.Module):
     def __init__(
             self, in_dim: int=200, out_dim: int=200,
             d_model: int=200, dim_feedforward: int=800,
-            seq_len: int=30, n_layer: int=12,
-            nhead: int=8, linear_proj: bool=True
+            n_layer: int=12,
+            nhead: int=8,
+            linear_proj: bool=True
         ):
         """
         Parameters
@@ -50,8 +51,6 @@ class CBraMod(nn.Module):
             Dimension of the latent space of the transformer encoder.
         dim_feedforward : int
             Dimension of the feedforward network in the transformer encoder.
-        seq_len : int
-            Length of the input sequence.
         n_layer : int
             Number of layers in the transformer encoder.
         nhead : int
@@ -63,8 +62,7 @@ class CBraMod(nn.Module):
             Default is True.
         """
         super().__init__()
-        self.patch_embedding = PatchEmbedding(
-            in_dim, out_dim, d_model, seq_len)
+        self.patch_embedding = PatchEmbedding(in_dim, d_model)
         encoder_layer = TransformerEncoderLayer(
             d_model=d_model, nhead=nhead,
             dim_feedforward=dim_feedforward,
@@ -121,19 +119,15 @@ class PatchEmbedding(nn.Module):
     Embed EEG patches into a higher-dimensional space
     using convolutional layers and spectral features.
     """
-    def __init__(self, in_dim: int, out_dim: int, d_model: int, seq_len: int):
+    def __init__(self, in_dim: int, d_model: int):
         """
         Parameters
         ----------
         in_dim : int
             Input dimension. (last dimension of the tensor)
-        out_dim : int
-            Output dimension of the model. (placeholder)
         d_model : int
             Dimension of the output features.
             This means the dimension of the output embeddings.
-        seq_len : int
-            Length of the input sequence. (placeholder)
         """
         super().__init__()
         self.d_model = d_model
@@ -182,7 +176,7 @@ class PatchEmbedding(nn.Module):
         ----------
         x : torch.Tensor
             Input tensor of shape 
-            (batch_size, num_of_channels, time_segments, points_per_patch).
+            (batch_size, num_of_channels, time_segments, in_dim).
             This corresponds to the EEG signal.
         mask : torch.Tensor, optional
             Mask tensor of the same shape as x,
@@ -235,15 +229,3 @@ def _weights_init(m):
     elif isinstance(m, nn.BatchNorm1d):
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
-
-
-
-if __name__ == '__main__':
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = CBraMod(in_dim=200, out_dim=200, d_model=200, dim_feedforward=800, seq_len=30, n_layer=12,
-                    nhead=8).to(device)
-    model.load_state_dict(torch.load('pretrained_weights/pretrained_weights.pth',
-                                     map_location=device))
-    a = torch.randn((8, 16, 10, 200)).cuda()
-    b = model(a)
-    print(a.shape, b.shape)
